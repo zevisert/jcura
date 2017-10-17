@@ -3,6 +3,9 @@ var metrics;
 var player;
 var levelHistory = new Array();
 var bitrateHistory = new Array();
+var asKiB = (bytes) => bytes / 1024;
+var asMiB = (bytes) => asKiB(bytes) / 1024;
+var asGiB = (bytes) => asMiB(bytes) / 1024;
 
 function setup() {
 
@@ -54,7 +57,7 @@ function drawBufferLevel(dpi){
 	});
 
 	// Draws the label for levelHistory
-	text(currentLevel + " s", width - 50, height - height/100 * currentLevel - height/25 );
+	text(`${currentLevel} s`, width - 50, height - height/100 * currentLevel - height/25 );
 }
 
 function drawBandwidthRepresentation(dpi) {
@@ -62,7 +65,8 @@ function drawBandwidthRepresentation(dpi) {
 	fill(255, 100, 100);
 	const representationId = dashMetrics.getCurrentRepresentationSwitch(metrics).to;
 	const periodId = player.getActiveStream().getStreamInfo().index;
-	let bandwidth = dashMetrics.getBandwidthForRepresentation(representationId, periodId) / 1e6;
+	let bandwidth = dashMetrics.getBandwidthForRepresentation(representationId, periodId);
+	bandwidth = asMiB(bandwidth);
 
 	// Draws the labels for the different MPD representations
 	let bitrates = player.getBitrateInfoListFor("video").map(i => i.bitrate);
@@ -72,7 +76,7 @@ function drawBandwidthRepresentation(dpi) {
 	textSize(8);
 	bitrates.forEach((mpdrate) => {
 		rect(0, height - height*mpdrate/maxbitrate, 10, 2);
-		text(Number(mpdrate/1e6).toFixed(2) + " MB/s", 0, height - height*mpdrate/maxbitrate - 2);
+		text(`${Number(asMiB(mpdrate)).toFixed(2)} MB/s`, 0, height - height*mpdrate/maxbitrate - 2);
 	});
 
 	// Updates the bitrateHistory
@@ -85,7 +89,7 @@ function drawBandwidthRepresentation(dpi) {
 	bitrateHistory.forEach((bitrate, i) => {
 		rect(
 			width - i * width/dpi, // Divide the width into dpi sections, and use the ith 
-			height - height * bitrate/(maxbitrate/1e6), // Same for the heigt, but with maxbitrate
+			height - height * bitrate/asMiB(maxbitrate), // Same for the heigt, but with maxbitrate
 			width/dpi + 1,
 			2
 		);
@@ -94,9 +98,9 @@ function drawBandwidthRepresentation(dpi) {
 	// Draws the label for bitrateHistory
 	textSize(12);
 	text(
-		(bandwidth || 0) + " MB/s",
+		`${Number(bandwidth || 0).toFixed(2)} MB/s`,
 		width - 80,
-		height - height/(maxbitrate / 1e6) * bandwidth - height/25
+		height - height/asMiB(maxbitrate) * bandwidth - height/25
 	);
 
 }
@@ -113,7 +117,9 @@ function drawTotalDownload(dpi) {
 	.reduce(add, 0);
 
 	textSize(14);
-	text(`Total bytes received = ${Number(total / 1e6).toFixed(2)} MB`, 0, 14);
+	text(`Total bytes received = ${Number(asMiB(total)).toFixed(2)} MiB`, 0, 14);
+	fill(150, 150, 75);
+	text(`Cost so far assuming $0.01 / GiB: $${Number(asGiB(total) * 0.01).toFixed(5)}`, 0, 30);
 }
 
 function windowResized() {
